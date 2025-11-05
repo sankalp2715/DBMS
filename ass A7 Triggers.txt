@@ -1,0 +1,87 @@
+
+CREATE TABLE Library (
+    Book_ID INT PRIMARY KEY,
+    Book_Name VARCHAR(100),
+    Author VARCHAR(100),
+    Price DECIMAL(10,2),
+    Quantity INT
+);
+
+-- Create Audit table
+CREATE TABLE Library_Audit (
+    Audit_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Book_ID INT,
+    Book_Name VARCHAR(100),
+    Author VARCHAR(100),
+    Price DECIMAL(10,2),
+    Quantity INT,
+    Action_Type VARCHAR(20),
+    Action_Date DATETIME
+);
+
+-- Insert sample data
+INSERT INTO Library VALUES
+(1, 'DBMS Concepts', 'Korth', 500.00, 10),
+(2, 'Operating System', 'Galvin', 600.00, 5),
+(3, 'Computer Networks', 'Tanenbaum', 450.00, 8);
+
+-- Change delimiter for trigger creation
+DELIMITER //
+
+-- BEFORE UPDATE trigger
+CREATE TRIGGER before_library_update
+BEFORE UPDATE ON Library
+FOR EACH ROW
+BEGIN
+    SET @info := CONCAT('Before updating Book_ID: ', OLD.Book_ID);
+END;
+//
+
+-- BEFORE DELETE trigger
+CREATE TRIGGER before_library_delete
+BEFORE DELETE ON Library
+FOR EACH ROW
+BEGIN
+    SET @info := CONCAT('Before deleting Book_ID: ', OLD.Book_ID);
+END;
+//
+
+-- AFTER UPDATE trigger (store old values in audit table)
+CREATE TRIGGER after_library_update
+AFTER UPDATE ON Library
+FOR EACH ROW
+BEGIN
+    INSERT INTO Library_Audit
+        (Book_ID, Book_Name, Author, Price, Quantity, Action_Type, Action_Date)
+    VALUES
+        (OLD.Book_ID, OLD.Book_Name, OLD.Author, OLD.Price, OLD.Quantity, 'UPDATED', NOW());
+END;
+//
+
+-- AFTER DELETE trigger (store deleted record in audit table)
+CREATE TRIGGER after_library_delete
+AFTER DELETE ON Library
+FOR EACH ROW
+BEGIN
+    INSERT INTO Library_Audit
+        (Book_ID, Book_Name, Author, Price, Quantity, Action_Type, Action_Date)
+    VALUES
+        (OLD.Book_ID, OLD.Book_Name, OLD.Author, OLD.Price, OLD.Quantity, 'DELETED', NOW());
+END;
+//
+
+DELIMITER ;
+
+-- =========================
+-- TEST THE TRIGGERS
+-- =========================
+
+-- Update one record
+UPDATE Library SET Price = 550.00 WHERE Book_ID = 1;
+
+-- Delete one record
+DELETE FROM Library WHERE Book_ID = 2;
+
+-- View main and audit tables
+SELECT * FROM Library;
+SELECT * FROM Library_Audit;

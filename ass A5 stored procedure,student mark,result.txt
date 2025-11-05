@@ -1,0 +1,67 @@
+
+CREATE TABLE Stud_Marks (
+    Name VARCHAR(50),
+    Total_Marks INT
+);
+
+CREATE TABLE Result (
+    Roll INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(50),
+    Class VARCHAR(30)
+);
+
+-- Create procedure
+DELIMITER $$
+
+CREATE PROCEDURE proc_Grade(IN p_name VARCHAR(50), IN p_marks INT)
+BEGIN
+    DECLARE v_class VARCHAR(30);
+
+    -- Classify student
+    IF p_marks >= 990 AND p_marks <= 1500 THEN
+        SET v_class = 'Distinction';
+    ELSEIF p_marks BETWEEN 900 AND 989 THEN
+        SET v_class = 'First Class';
+    ELSEIF p_marks BETWEEN 825 AND 899 THEN
+        SET v_class = 'Higher Second Class';
+    ELSE
+        SET v_class = 'Fail';
+    END IF;
+
+    -- Insert data
+    INSERT INTO Stud_Marks(Name, Total_Marks) VALUES(p_name, p_marks);
+    INSERT INTO Result(Name, Class) VALUES(p_name, v_class);
+
+    -- Display message
+    SELECT CONCAT('Inserted: ', p_name, ' -> ', v_class) AS Message;
+END $$
+
+DELIMITER ;
+
+-- Call procedure
+CALL proc_Grade('Sankalp', 1200);
+CALL proc_Grade('Ravi', 960);
+CALL proc_Grade('Amit', 850);
+CALL proc_Grade('Nikita', 700);
+
+-- Create function
+DELIMITER $$
+
+CREATE FUNCTION fun_ClassCount(p_class VARCHAR(30))
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE v_total INT;
+    SELECT COUNT(*) INTO v_total FROM Result WHERE Class = p_class;
+    RETURN v_total;
+END $$
+
+DELIMITER ;
+
+-- Use function
+SELECT fun_ClassCount('Distinction') AS Total_Distinction;
+SELECT fun_ClassCount('Fail') AS Total_Fail;
+
+-- View tables
+SELECT * FROM Stud_Marks;
+SELECT * FROM Result;

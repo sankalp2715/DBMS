@@ -1,0 +1,45 @@
+
+CREATE TABLE Department (
+    dept_id INT PRIMARY KEY AUTO_INCREMENT,
+    dept_name VARCHAR(50) UNIQUE NOT NULL,
+    location VARCHAR(50)
+);
+
+CREATE TABLE Employee (
+    emp_id INT PRIMARY KEY AUTO_INCREMENT,
+    emp_name VARCHAR(50) NOT NULL,
+    emp_email VARCHAR(100) UNIQUE,
+    emp_salary DECIMAL(10,2) CHECK (emp_salary >= 10000),
+    hire_date DATE DEFAULT (CURRENT_DATE),
+    dept_id INT,
+    CONSTRAINT fk_dept FOREIGN KEY (dept_id) REFERENCES Department(dept_id)
+);
+
+CREATE INDEX idx_emp_name ON Employee(emp_name);
+
+CREATE VIEW emp_dept_view AS
+SELECT 
+    e.emp_id, e.emp_name, e.emp_email, e.emp_salary,
+    d.dept_name, d.location
+FROM 
+    Employee e
+JOIN 
+    Department d ON e.dept_id = d.dept_id;
+
+INSERT INTO Department (dept_name, location)
+VALUES 
+('Computer Science', 'Pune'),
+('Mechanical', 'Mumbai'),
+('Electrical', 'Nagpur');
+
+INSERT INTO Employee (emp_name, emp_email, emp_salary, hire_date, dept_id)
+VALUES 
+('Sankalp Mendhe', 'sankalp@gmail.com', 25000, '2024-05-10', 1),
+('Ravi Patil', 'ravi@gmail.com', 30000, '2023-12-12', 2),
+('Anjali Deshmukh', 'anjali@gmail.com', 40000, '2024-04-18', 3);
+
+SELECT * FROM emp_dept_view;
+
+SHOW TABLES;
+SHOW FULL TABLES WHERE table_type = 'VIEW';
+SHOW INDEX FROM Employee;

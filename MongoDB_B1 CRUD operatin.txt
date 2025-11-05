@@ -1,0 +1,84 @@
+// Insert Multiple Documents
+db.articles.insertMany([
+  {
+    Title: "Database Basics",
+    Content: "Introduction to DBMS",
+    Author: "Sankalp",
+    Author_age: 20,
+    Dop: new Date("2025-10-20"),
+    Category: "DBMS",
+    Comment: [
+      { Name: "Riya", Remarks: "Very helpful" },
+      { Name: "Amit", Remarks: "Nice article" }
+    ]
+  },
+  {
+    Title: "MongoDB CRUD",
+    Content: "Explains Create, Read, Update, Delete",
+    Author: "Harish",
+    Author_age: 22,
+    Dop: new Date("2025-10-22"),
+    Category: "NoSQL",
+    Comment: [
+      { Name: "Raj", Remarks: "Clear concepts" }
+    ]
+  }
+]);
+
+// Display All Documents
+print("=== Display All Documents ===");
+db.articles.find().pretty();
+
+// Update One Document
+print("=== Update Author Age ===");
+db.articles.updateOne(
+  { Title: "Database Basics" },
+  { $set: { Author_age: 21 } }
+);
+
+// Delete One Document
+print("=== Delete 'MongoDB CRUD' Document ===");
+db.articles.deleteOne({ Title: "MongoDB CRUD" });
+
+// ---- save() REPLACEMENT ----
+// Replace entire doc (or insert if not exists) — equivalent to legacy save()
+print("=== Replace/Upsert Using replaceOne (save() alternative) ===");
+db.articles.replaceOne(
+  { Title: "Database Basics" },                 // match
+  {                                             // full replacement doc
+    Title: "Database Basics",
+    Content: "Updated DBMS article using replaceOne (upsert)",
+    Author: "Sankalp",
+    Author_age: 21,
+    Dop: new Date("2025-10-20"),
+    Category: "DBMS",
+    Comment: [{ Name: "Riya", Remarks: "Updated remarks" }]
+  },
+  { upsert: true }                              // insert if not found
+);
+
+// Logical Operators
+print("=== Logical Operator: AND ===");
+db.articles.find({
+  $and: [
+    { Author_age: { $gt: 18 } },
+    { Category: "DBMS" }
+  ]
+}).pretty();
+
+print("=== Logical Operator: OR ===");
+db.articles.find({
+  $or: [
+    { Category: "DBMS" },
+    { Category: "NoSQL" }
+  ]
+}).pretty();
+
+print("=== Logical Operator: NOT ===");
+db.articles.find({
+  Author_age: { $not: { $lt: 21 } }
+}).pretty();
+
+// Final state
+print("=== Final Articles Collection ===");
+db.articles.find().pretty();

@@ -1,0 +1,84 @@
+
+
+-- Create the old table
+CREATE TABLE O_RollCall (
+  Roll_No INT PRIMARY KEY,
+  Name VARCHAR(50),
+  Branch VARCHAR(30)
+);
+
+-- Insert some sample data
+INSERT INTO O_RollCall VALUES 
+(1, 'Sankalp', 'Computer'),
+(2, 'Ravi', 'Mechanical'),
+(3, 'Amit', 'Electrical');
+
+-- Create the new table
+CREATE TABLE N_RollCall (
+  Roll_No INT PRIMARY KEY,
+  Name VARCHAR(50),
+  Branch VARCHAR(30)
+);
+
+-- Insert new data 
+INSERT INTO N_RollCall VALUES
+(2, 'Ravi', 'Mechanical'),  -- duplicate
+(4, 'Nikita', 'Computer'),  -- new
+(5, 'Anjali', 'IT');        -- new
+
+
+
+-- STORED PROCEDURE TO MERGE TABLES USING CURSOR
+
+
+DELIMITER $$
+
+CREATE PROCEDURE Merge_RollCall()
+BEGIN
+  DECLARE v_roll INT;
+  DECLARE v_name VARCHAR(50);
+  DECLARE v_branch VARCHAR(30);
+  DECLARE done INT DEFAULT 0;
+
+  -- Cursor to fetch all data from N_RollCall
+  DECLARE cur CURSOR FOR 
+    SELECT Roll_No, Name, Branch FROM N_RollCall;
+
+  -- Declare handler for end of cursor
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+  OPEN cur;
+
+  read_loop: LOOP
+    FETCH cur INTO v_roll, v_name, v_branch;
+    IF done = 1 THEN
+      LEAVE read_loop;
+    END IF;
+
+    -- Check if record already exists in O_RollCall
+    IF NOT EXISTS (SELECT 1 FROM O_RollCall WHERE Roll_No = v_roll) THEN
+      INSERT INTO O_RollCall (Roll_No, Name, Branch)
+      VALUES (v_roll, v_name, v_branch);
+      SELECT CONCAT('Inserted Roll No: ', v_roll) AS Message;
+    ELSE
+      SELECT CONCAT('Skipped duplicate Roll No: ', v_roll) AS Message;
+    END IF;
+  END LOOP;
+
+  CLOSE cur;
+
+  SELECT 'Data merge complete.' AS Status;
+END$$
+
+DELIMITER ;
+
+
+-- EXECUTE PROCEDURE
+
+
+CALL Merge_RollCall();
+
+
+-- CHECK FINAL DATA
+
+SELECT * FROM O_RollCall;

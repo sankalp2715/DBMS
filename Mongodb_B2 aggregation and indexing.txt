@@ -1,0 +1,85 @@
+
+// Create and Insert Orders Collection
+db.orders.insertMany([
+  {
+    order_id: 101,
+    cust_id: "C001",
+    cust_name: "Riya",
+    phone_no: ["9876543210", "9123456789"],
+    email_id: "riya@gmail.com",
+    item_name: "Mobile",
+    DtOfOrder: "2025-10-25",
+    quantity: 1,
+    amount: 15000,
+    status: "D"
+  },
+  {
+    order_id: 102,
+    cust_id: "C002",
+    cust_name: "Amit",
+    phone_no: ["9988776655"],
+    item_name: "Laptop",
+    DtOfOrder: "2025-10-27",
+    quantity: 1,
+    amount: 50000,
+    status: "P"
+  },
+  {
+    order_id: 103,
+    cust_id: "C003",
+    cust_name: "Rohan",
+    phone_no: ["9090909090"],
+    item_name: "Headphones",
+    DtOfOrder: "2025-10-28",
+    quantity: 2,
+    amount: 4000,
+    status: "D"
+  },
+  {
+    order_id: 104,
+    cust_id: "C004",
+    cust_name: "Sneha",
+    phone_no: ["7778889999"],
+    item_name: "Laptop",
+    DtOfOrder: "2025-10-30",
+    quantity: 1,
+    amount: 48000,
+    status: "D"
+  }
+])
+
+// Display All Documents
+db.orders.find().pretty()
+
+// Create Index on Customer Name
+db.orders.createIndex({ cust_name: 1 })
+
+// Show All Indexes
+db.orders.getIndexes()
+
+// Aggregation 1: Match (Delivered Orders)
+db.orders.aggregate([
+  { $match: { status: "D" } }
+])
+
+// Aggregation 2: Group (Total Sales by Item)
+db.orders.aggregate([
+  { $group: { _id: "$item_name", totalAmount: { $sum: "$amount" } } }
+])
+
+// Aggregation 3: Project (Show Specific Fields)
+db.orders.aggregate([
+  { $project: { _id: 0, cust_name: 1, item_name: 1, amount: 1, status: 1 } }
+])
+
+// Aggregation 4: Sort by Amount (Descending)
+db.orders.aggregate([
+  { $sort: { amount: -1 } }
+])
+
+// Aggregation 5: Combined Example (Match + Group + Sort)
+db.orders.aggregate([
+  { $match: { status: "D" } },
+  { $group: { _id: "$item_name", totalSales: { $sum: "$amount" } } },
+  { $sort: { totalSales: -1 } }
+])

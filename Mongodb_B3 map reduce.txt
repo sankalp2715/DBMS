@@ -1,0 +1,28 @@
+
+db.orders.insertMany([
+  { customer_id: 101, order_date: "2025-10-20", status: "Delivered", price: 2500, items: ["Mouse", "Keyboard"], quantity: 2 },
+  { customer_id: 102, order_date: "2025-10-22", status: "Pending", price: 1500, items: ["Monitor"], quantity: 1 },
+  { customer_id: 103, order_date: "2025-10-25", status: "Delivered", price: 3500, items: ["Laptop"], quantity: 1 },
+  { customer_id: 104, order_date: "2025-10-27", status: "Cancelled", price: 1200, items: ["Headphones"], quantity: 1 },
+  { customer_id: 105, order_date: "2025-10-29", status: "Delivered", price: 1800, items: ["Mouse"], quantity: 1 }
+])
+
+// Map function: emits key-value pairs (status, price)
+var mapFunction = function() {
+  emit(this.status, this.price);
+};
+
+// Reduce function: sums up prices for each status
+var reduceFunction = function(key, values) {
+  return Array.sum(values);
+};
+
+// Execute MapReduce operation
+db.orders.mapReduce(
+  mapFunction,
+  reduceFunction,
+  { out: "order_summary" }
+)
+
+// Display the results
+db.order_summary.find().pretty()

@@ -1,0 +1,109 @@
+
+CREATE TABLE Students (
+  student_id INT PRIMARY KEY,
+  student_name VARCHAR(50),
+  city VARCHAR(50),
+  age INT
+);
+
+CREATE TABLE Courses (
+  course_id INT PRIMARY KEY,
+  course_name VARCHAR(50),
+  duration VARCHAR(20)
+);
+
+CREATE TABLE Enrollments (
+  enrollment_id INT PRIMARY KEY,
+  student_id INT,
+  course_id INT,
+  marks INT,
+  FOREIGN KEY (student_id) REFERENCES Students(student_id),
+  FOREIGN KEY (course_id) REFERENCES Courses(course_id)
+);
+
+-- Insert Data
+INSERT INTO Students VALUES 
+(1, 'Sankalp', 'Pune', 21),
+(2, 'Aarav', 'Nagpur', 22),
+(3, 'Riya', 'Wardha', 20),
+(4, 'Aditya', 'Mumbai', 23),
+(5, 'Neha', 'Pune', 21);
+
+INSERT INTO Courses VALUES 
+(101, 'DBMS', '3 Months'),
+(102, 'Python', '4 Months'),
+(103, 'Web Dev', '6 Months');
+
+INSERT INTO Enrollments VALUES 
+(1, 1, 101, 85),
+(2, 2, 101, 75),
+(3, 3, 102, 80),
+(4, 4, 103, 90),
+(5, 5, 103, 88);
+
+-- 1. INNER JOIN
+SELECT s.student_name, c.course_name, e.marks
+FROM Students s
+INNER JOIN Enrollments e ON s.student_id = e.student_id
+INNER JOIN Courses c ON e.course_id = c.course_id;
+
+-- 2. LEFT JOIN
+SELECT s.student_name, c.course_name
+FROM Students s
+LEFT JOIN Enrollments e ON s.student_id = e.student_id
+LEFT JOIN Courses c ON e.course_id = c.course_id;
+
+-- 3. RIGHT JOIN
+SELECT s.student_name, c.course_name
+FROM Students s
+RIGHT JOIN Enrollments e ON s.student_id = e.student_id
+RIGHT JOIN Courses c ON e.course_id = c.course_id;
+
+-- 4. CROSS JOIN
+SELECT s.student_name, c.course_name
+FROM Students s
+CROSS JOIN Courses c;
+
+-- 5. SELF JOIN
+SELECT s1.student_name AS Student1, s2.student_name AS Student2, s1.city
+FROM Students s1
+JOIN Students s2 ON s1.city = s2.city AND s1.student_id <> s2.student_id;
+
+-- 6. SUBQUERY (Single Row)
+SELECT student_id, marks
+FROM Enrollments
+WHERE marks = (SELECT MAX(marks) FROM Enrollments);
+
+-- 7. SUBQUERY (Multiple Row)
+SELECT student_name
+FROM Students
+WHERE student_id IN (
+  SELECT student_id
+  FROM Enrollments
+  WHERE course_id IN (
+    SELECT course_id FROM Courses WHERE duration IN ('3 Months', '4 Months')
+  )
+);
+
+-- 8. GROUP BY and HAVING
+SELECT c.course_name, AVG(e.marks) AS avg_marks
+FROM Enrollments e
+JOIN Courses c ON e.course_id = c.course_id
+GROUP BY c.course_name
+HAVING avg_marks > 80;
+
+-- 9. UPDATE using JOIN
+UPDATE Enrollments e
+JOIN Courses c ON e.course_id = c.course_id
+SET e.marks = e.marks + 5
+WHERE c.course_name = 'DBMS';
+
+-- 10. CREATE VIEW
+CREATE OR REPLACE VIEW student_course_view AS
+SELECT s.student_name, c.course_name, e.marks
+FROM Students s
+JOIN Enrollments e ON s.student_id = e.student_id
+JOIN Courses c ON e.course_id = c.course_id;
+
+-- SELECT from VIEW
+SELECT * FROM student_course_view;

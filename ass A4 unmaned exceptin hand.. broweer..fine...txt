@@ -1,0 +1,94 @@
+
+-- Create Borrower table
+CREATE TABLE Borrower (
+    Rollno INT PRIMARY KEY,
+    Name VARCHAR(50),
+    DateOfIssue DATE,
+    NameOfBook VARCHAR(100),
+    Status CHAR(1)
+);
+
+-- Create Fine table
+CREATE TABLE Fine (
+    Roll_no INT,
+    Date DATE,
+    Amt DECIMAL(10,2)
+);
+
+-- Insert sample data
+INSERT INTO Borrower VALUES
+(1, 'Sankalp', '2024-10-10', 'DBMS', 'I'),
+(2, 'Ravi', '2024-09-20', 'CN', 'I');
+
+
+-- Stored Procedure: Calculate Fine + Exception Handling
+
+
+DELIMITER $$
+
+CREATE PROCEDURE Calculate_Fine(
+    IN p_rollno INT,
+    IN p_book VARCHAR(100)
+)
+BEGIN
+    DECLARE v_date_issue DATE;
+    DECLARE v_days INT DEFAULT 0;
+    DECLARE v_fine DECIMAL(10,2) DEFAULT 0;
+    DECLARE not_found CONDITION FOR SQLSTATE '02000';
+    DECLARE EXIT HANDLER FOR not_found
+    BEGIN
+        SELECT 'No record found for given Roll No or Book Name.' AS Message;
+    END;
+
+    -- Get date of issue
+    SELECT DateOfIssue INTO v_date_issue
+    FROM Borrower
+    WHERE Rollno = p_rollno AND NameOfBook = p_book AND Status = 'I';
+
+    -- Calculate days between issue and today
+    SET v_days = DATEDIFF(CURDATE(), v_date_issue);
+
+    -- Fine calculation logic
+    IF v_days BETWEEN 15 AND 30 THEN
+        SET v_fine = v_days * 5;
+    ELSEIF v_days > 30 THEN
+        SET v_fine = (30 * 5) + ((v_days - 30) * 50);
+    ELSE
+        SET v_fine = 0;
+    END IF;
+
+    -- Update book status
+    UPDATE Borrower
+    SET Status = 'R'
+    WHERE Rollno = p_rollno AND NameOfBook = p_book;
+
+    -- Insert into Fine table if fine exists
+    IF v_fine > 0 THEN
+        INSERT INTO Fine VALUES(p_rollno, CURDATE(), v_fine);
+        SELECT CONCAT('Fine generated: Rs ', v_fine) AS Message;
+    ELSE
+        SELECT 'No fine applicable.' AS Message;
+    END IF;
+END $$
+
+DELIMITER ;
+
+
+-- Test the Procedure
+
+
+-- Case 1: Fine applicable
+CALL Calculate_Fine(1, 'DBMS');
+
+-- Case 2: Fine applicable (more than 30 days)
+CALL Calculate_Fine(2, 'CN');
+
+-- Case 3: Invalid record (exception)
+CALL Calculate_Fine(3, 'OS');
+
+
+-- View Tables
+
+
+SELECT * FROM Borrower;
+SELECT * FROM Fine;
