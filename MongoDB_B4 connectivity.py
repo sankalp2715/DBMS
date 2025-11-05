@@ -1,3 +1,6 @@
+pip install pymongo
+
+
 # Import pymongo
 from pymongo import MongoClient
 
