@@ -1,0 +1,197 @@
+pip install flask mysql-connector-python
+
+# app.py
+# Quick Flask + MySQL CRUD (single file)
+
+from flask import Flask, request, redirect, url_for, render_template_string, flash
+import mysql.connector as mysql
+
+# ==== MySQL config (EDIT THESE) ====
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",          # <-- change if needed
+    "password": "password",  # <-- change if needed
+    "database": "college_db",
+}
+
+app = Flask(__name__)
+app.secret_key = "devkey"  # for flash messages
+
+# ---- helpers ----
+def get_conn(db_name=None):
+    cfg = DB_CONFIG.copy()
+    if db_name:
+        cfg["database"] = db_name
+    return mysql.connect(**cfg)
+
+# ---- bootstrap DB/table if missing ----
+def init_db():
+    # Connect without database first to create it if not exists
+    cfg = DB_CONFIG.copy()
+    dbname = cfg.pop("database")
+    con = mysql.connect(**cfg)
+    cur = con.cursor()
+    cur.execute(f"CREATE DATABASE IF NOT EXISTS `{dbname}`;")
+    con.commit()
+    cur.close(); con.close()
+
+    # Now ensure table exists
+    con = get_conn()
+    cur = con.cursor()
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS students (
+            rollno VARCHAR(20) PRIMARY KEY,
+            name   VARCHAR(100) NOT NULL,
+            course VARCHAR(100),
+            city   VARCHAR(100)
+        );
+        """
+    )
+    con.commit()
+    cur.close(); con.close()
+
+# ---- routes ----
+@app.route("/")
+def index():
+    con = get_conn()
+    cur = con.cursor(dictionary=True)
+    cur.execute("SELECT rollno,name,course,city FROM students ORDER BY rollno;")
+    rows = cur.fetchall()
+    cur.close(); con.close()
+    return render_template_string(TPL, rows=rows)
+
+@app.route("/add", methods=["POST"])
+def add():
+    rollno = (request.form.get("rollno") or "").strip()
+    name   = (request.form.get("name") or "").strip()
+    course = (request.form.get("course") or "").strip()
+    city   = (request.form.get("city") or "").strip()
+    if not rollno or not name:
+        flash("rollno & name required")
+        return redirect(url_for("index"))
+    con = get_conn(); cur = con.cursor()
+    try:
+        cur.execute(
+            "INSERT INTO students(rollno,name,course,city) VALUES(%s,%s,%s,%s)",
+            (rollno, name, course, city),
+        )
+        con.commit(); flash("Added")
+    except mysql.Error as e:
+        if getattr(e, "errno", None) == 1062:  # duplicate PK
+            flash("rollno already exists")
+        else:
+            flash(f"DB error: {e}")
+    finally:
+        cur.close(); con.close()
+    return redirect(url_for("index"))
+
+@app.route("/edit/<rollno>", methods=["POST"])
+def edit(rollno):
+    name   = (request.form.get("name") or "").strip()
+    course = (request.form.get("course") or "").strip()
+    city   = (request.form.get("city") or "").strip()
+    con = get_conn(); cur = con.cursor()
+    cur.execute(
+        "UPDATE students SET name=%s, course=%s, city=%s WHERE rollno=%s",
+        (name, course, city, rollno),
+    )
+    con.commit(); cur.close(); con.close(); flash("Updated")
+    return redirect(url_for("index"))
+
+@app.route("/delete/<rollno>", methods=["POST"])
+def delete(rollno):
+    con = get_conn(); cur = con.cursor()
+    cur.execute("DELETE FROM students WHERE rollno=%s", (rollno,))
+    con.commit(); cur.close(); con.close(); flash("Deleted")
+    return redirect(url_for("index"))
+
+# ---- minimal UI (Bootstrap CDN) ----
+TPL = r"""
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Students — MySQL CRUD</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-4">
+  <h1 class="mb-3">Students</h1>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <div class="alert alert-info py-2">{{ messages|join(', ') }}</div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="card mb-4">
+    <div class="card-header">Add New</div>
+    <div class="card-body">
+      <form class="row gy-2 gx-2 align-items-end" method="post" action="{{ url_for('add') }}">
+        <div class="col-sm-2">
+          <label class="form-label">Roll No</label>
+          <input name="rollno" class="form-control" required>
+        </div>
+        <div class="col-sm-3">
+          <label class="form-label">Name</label>
+          <input name="name" class="form-control" required>
+        </div>
+        <div class="col-sm-3">
+          <label class="form-label">Course</label>
+          <input name="course" class="form-control">
+        </div>
+        <div class="col-sm-2">
+          <label class="form-label">City</label>
+          <input name="city" class="form-control">
+        </div>
+        <div class="col-sm-2">
+          <button class="btn btn-primary w-100" type="submit">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Records</div>
+    <div class="card-body p-0">
+      <table class="table table-striped table-hover mb-0">
+        <thead class="table-secondary">
+          <tr>
+            <th>Roll No</th><th>Name</th><th>Course</th><th>City</th><th style="width:220px">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if rows %}
+            {% for r in rows %}
+              <tr>
+                <form method="post" action="{{ url_for('edit', rollno=r.rollno) }}">
+                  <td><input name="rollno" class="form-control" value="{{ r.rollno }}" disabled></td>
+                  <td><input name="name" class="form-control" value="{{ r.name }}" required></td>
+                  <td><input name="course" class="form-control" value="{{ r.course or '' }}"></td>
+                  <td><input name="city" class="form-control" value="{{ r.city or '' }}"></td>
+                  <td class="d-flex gap-2">
+                    <button class="btn btn-sm btn-success" type="submit">Save</button>
+                </form>
+                    <form method="post" action="{{ url_for('delete', rollno=r.rollno) }}" onsubmit="return confirm('Delete {{ r.rollno }}?')">
+                      <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                    </form>
+                  </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="5" class="text-center py-4">No records</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+"""
+
+if __name__ == "__main__":
+    init_db()
+    # Tip: If you want it accessible from your phone on same Wi-Fi, keep host="0.0.0.0"
+    app.run(debug=True, host="0.0.0.0", port=5000)
